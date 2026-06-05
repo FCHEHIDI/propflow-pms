@@ -1,0 +1,21 @@
+{
+  "ConnectionStrings": {
+    "Postgres": "Host=localhost;Port=5432;Database=propflow;Username=propflow;Password=propflow",
+    "ServiceBus": "rabbitmq://propflow:propflow@localhost/"
+  },
+  "MultiTenancy": {
+    "Tenants": [
+      {
+        "Id": "00000000-0000-0000-0000-000000000001",
+        "Identifier": "demo-hotel",
+        "Name": "Demo Hotel"
+      }
+    ]
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Debug",
+      "Microsoft.AspNetCore": "Information"
+    }
+  }
+}

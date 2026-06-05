@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Marten" Version="7.35.0" />
+    <PackageReference Include="MassTransit" Version="8.4.1" />
+    <PackageReference Include="MassTransit.Azure.ServiceBus.Core" Version="8.4.1" />
+    <PackageReference Include="MassTransit.Marten" Version="8.4.1" />
+    <PackageReference Include="Finbuckle.MultiTenant.AspNetCore" Version="6.13.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PropFlow.Domain\PropFlow.Domain.csproj" />
+    <ProjectReference Include="..\PropFlow.Application\PropFlow.Application.csproj" />
+  </ItemGroup>
+</Project>
