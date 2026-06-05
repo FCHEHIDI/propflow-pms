@@ -1,25 +1,62 @@
-version: '3.9'
-
 services:
-  postgres:
-    image: postgres:16
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
     environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=propflow;Username=propflow;Password=propflow"
+      ConnectionStrings__ServiceBus: "rabbitmq://propflow:propflow@rabbitmq/"
+      Jwt__Secret: "dev-secret-key-min-32-chars-propflow"
+      Jwt__Issuer: "propflow"
+      Jwt__Audience: "propflow-api"
+      OpenTelemetry__Endpoint: "http://otel-collector:4317"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: propflow
       POSTGRES_USER: propflow
       POSTGRES_PASSWORD: propflow
-      POSTGRES_DB: propflow
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U propflow -d propflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   rabbitmq:
-    image: rabbitmq:3.13-management
+    image: rabbitmq:3.13-management-alpine
     ports:
       - "5672:5672"
       - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: propflow
       RABBITMQ_DEFAULT_PASS: propflow
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./otel-collector.yml:/etc/otelcol-contrib/config.yaml:ro
 
 volumes:
   postgres_data:
