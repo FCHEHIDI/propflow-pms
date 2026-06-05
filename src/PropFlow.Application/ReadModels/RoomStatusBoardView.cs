@@ -3,22 +3,25 @@ using PropFlow.Domain.Rooms;
 namespace PropFlow.Application.ReadModels;
 
 /// <summary>
-/// Live projection consumed by housekeeping tablets and IoTPanelService.
-/// Updated on every RoomStatusChanged event.
+/// Marten document. Updated by RoomStatusBoardProjection.
+/// Id = RoomId. Created on RoomCreated, updated on RoomStatusChanged.
+/// Consumed by: housekeeping tablets, IoTPanelService, front-desk dashboard.
 /// </summary>
-public sealed record RoomStatusBoardView
+public sealed class RoomStatusBoardView
 {
-    public Guid RoomId { get; init; }
-    public Guid PropertyId { get; init; }
-    public string RoomNumber { get; init; } = default!;
-    public int Floor { get; init; }
-    public string? Wing { get; init; }
-    public string? Building { get; init; }
-    public RoomStatus Status { get; init; }
-    public string? OccupancyKind { get; init; }
-    public string? GuestName { get; init; }
-    public DateTime? CheckOutTime { get; init; }
-    public DateTime LastChangedAt { get; init; }
-    public string? AssignedHousekeeper { get; init; }
-    public string? Notes { get; init; }
+    /// <summary>= RoomId</summary>
+    public Guid Id { get; set; }
+    public Guid PropertyId { get; set; }
+    public string RoomNumber { get; set; } = string.Empty;
+    public int Floor { get; set; }
+    public string? Wing { get; set; }
+    public string? Building { get; set; }
+    public RoomStatus Status { get; set; }
+    /// <summary>Non-null only when Status == Occupied.</summary>
+    public string? OccupancyKind { get; set; }
+    public string? GuestName { get; set; }
+    public DateOnly? CheckOutDate { get; set; }
+    public DateTime LastChangedAt { get; set; }
+    public string? AssignedHousekeeper { get; set; }
+    public string? Notes { get; set; }
 }

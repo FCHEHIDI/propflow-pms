@@ -1,3 +1,4 @@
+using MassTransit;
 using Marten;
 using PropFlow.Domain.Bookings;
 
@@ -6,8 +7,13 @@ namespace PropFlow.Infrastructure.Persistence.Repositories;
 public sealed class PgBookingRepository : IBookingRepository
 {
     private readonly IDocumentSession _session;
+    private readonly IPublishEndpoint _bus;
 
-    public PgBookingRepository(IDocumentSession session) => _session = session;
+    public PgBookingRepository(IDocumentSession session, IPublishEndpoint bus)
+    {
+        _session = session;
+        _bus = bus;
+    }
 
     public async Task<Booking?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
         await _session.LoadAsync<Booking>(id, ct);
@@ -31,13 +37,20 @@ public sealed class PgBookingRepository : IBookingRepository
     {
         _session.Store(booking);
         await _session.SaveChangesAsync(ct);
-        booking.ClearDomainEvents();
+        await DispatchAsync(booking, ct);
     }
 
     public async Task UpdateAsync(Booking booking, CancellationToken ct = default)
     {
         _session.Store(booking);
         await _session.SaveChangesAsync(ct);
+        await DispatchAsync(booking, ct);
+    }
+
+    private async Task DispatchAsync(Booking booking, CancellationToken ct)
+    {
+        foreach (var @event in booking.DomainEvents)
+            await _bus.Publish(@event, ct);
         booking.ClearDomainEvents();
     }
 }

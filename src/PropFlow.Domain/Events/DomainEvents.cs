@@ -4,6 +4,19 @@ namespace PropFlow.Domain.Events;
 
 // ─── Room ─────────────────────────────────────────────────────────────────────
 
+/// <summary>Consumed by RoomStatusBoardProjection to create the initial read model document.</summary>
+public sealed record RoomCreated(
+    Guid RoomId,
+    Guid PropertyId,
+    Guid RoomTypeId,
+    string RoomNumber,
+    int Floor,
+    string? Wing = null,
+    string? Building = null)
+{
+    public DateTime OccurredAt { get; } = DateTime.UtcNow;
+}
+
 /// <summary>Consumed by HousekeepingProjection and IoTPanelService.</summary>
 public sealed record RoomStatusChanged(
     Guid RoomId,
@@ -44,7 +57,7 @@ public sealed record RoomTypeDeprecated(Guid RoomTypeId, Guid PropertyId)
 
 // ─── RatePlan ─────────────────────────────────────────────────────────────────
 
-/// <summary>If IsPublic=true, triggers channel sync.</summary>
+/// <summary>If IsPublic=true, triggers ARI rate sync to all active channel connections.</summary>
 public sealed record RatePlanPublished(Guid RatePlanId, Guid PropertyId, bool IsPublic)
 {
     public DateTime OccurredAt { get; } = DateTime.UtcNow;
@@ -111,7 +124,10 @@ public sealed record BookingNoShow(Guid BookingId, Guid PropertyId, Guid GuestId
 
 // ─── Inventory ────────────────────────────────────────────────────────────────
 
-/// <summary>Primary signal consumed by ChannelSyncService to push ARI updates to OTAs.</summary>
+/// <summary>
+/// Primary signal consumed by AvailabilityViewProjection and ChannelSyncService.
+/// AvailabilityView is updated first (read model); then OTA push happens async.
+/// </summary>
 public sealed record InventoryUpdated(
     Guid PropertyId,
     Guid RoomTypeId,

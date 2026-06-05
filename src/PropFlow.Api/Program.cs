@@ -6,23 +6,27 @@ using PropFlow.Domain.Rooms;
 using PropFlow.Infrastructure;
 using PropFlow.Infrastructure.Messaging;
 using PropFlow.Infrastructure.Persistence.Repositories;
+using PropFlow.Infrastructure.Workers;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ─── Multi-tenancy (schema-per-tenant) ─────────────────────────────────
-// Tenant resolved from JWT claim "tenant_id" on each request.
+// ─── Multi-tenancy (schema-per-tenant) ────────────────────────────────
 builder.Services
     .AddMultiTenant<TenantInfo>()
     .WithClaimStrategy("tenant_id")
     .WithConfigurationStore();
 
-// ─── CQRS ─────────────────────────────────────────────────────
+// ─── CQRS (Application + Infrastructure handlers) ──────────────────────
+// Application: command handlers, saga messages
+// Infrastructure: query handlers (require IQuerySession from Marten)
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssemblies(
-        typeof(PropFlow.Application.AssemblyMarker).Assembly));
+        typeof(PropFlow.Application.AssemblyMarker).Assembly,
+        typeof(PropFlow.Infrastructure.AssemblyMarker).Assembly));
 
 // ─── Persistence (Marten document store) ────────────────────────────
+// Marten registers IDocumentSession (write) and IQuerySession (read) automatically.
 builder.Services.AddMartenDocumentStore(
     builder.Configuration.GetConnectionString("Postgres")
     ?? throw new InvalidOperationException("ConnectionStrings:Postgres is required."));
@@ -33,9 +37,12 @@ builder.Services.AddPropFlowMessaging(
     ?? throw new InvalidOperationException("ConnectionStrings:ServiceBus is required."));
 
 // ─── Repositories ──────────────────────────────────────────────
-builder.Services.AddScoped<IBookingRepository,    PgBookingRepository>();
-builder.Services.AddScoped<IRoomRepository,       PgRoomRepository>();
-builder.Services.AddScoped<IAllotmentRepository,  PgAllotmentRepository>();
+builder.Services.AddScoped<IBookingRepository,   PgBookingRepository>();
+builder.Services.AddScoped<IRoomRepository,      PgRoomRepository>();
+builder.Services.AddScoped<IAllotmentRepository, PgAllotmentRepository>();
+
+// ─── Background workers ─────────────────────────────────────────
+builder.Services.AddHostedService<NightAuditWorker>();
 
 // ─── OpenAPI ──────────────────────────────────────────────────
 builder.Services.AddOpenApi();

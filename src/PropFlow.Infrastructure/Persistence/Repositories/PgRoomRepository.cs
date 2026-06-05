@@ -1,3 +1,4 @@
+using MassTransit;
 using Marten;
 using PropFlow.Domain.Rooms;
 
@@ -6,8 +7,13 @@ namespace PropFlow.Infrastructure.Persistence.Repositories;
 public sealed class PgRoomRepository : IRoomRepository
 {
     private readonly IDocumentSession _session;
+    private readonly IPublishEndpoint _bus;
 
-    public PgRoomRepository(IDocumentSession session) => _session = session;
+    public PgRoomRepository(IDocumentSession session, IPublishEndpoint bus)
+    {
+        _session = session;
+        _bus = bus;
+    }
 
     public async Task<Room?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
         await _session.LoadAsync<Room>(id, ct);
@@ -33,13 +39,20 @@ public sealed class PgRoomRepository : IRoomRepository
     {
         _session.Store(room);
         await _session.SaveChangesAsync(ct);
-        room.ClearDomainEvents();
+        await DispatchAsync(room, ct);
     }
 
     public async Task UpdateAsync(Room room, CancellationToken ct = default)
     {
         _session.Store(room);
         await _session.SaveChangesAsync(ct);
+        await DispatchAsync(room, ct);
+    }
+
+    private async Task DispatchAsync(Room room, CancellationToken ct)
+    {
+        foreach (var @event in room.DomainEvents)
+            await _bus.Publish(@event, ct);
         room.ClearDomainEvents();
     }
 }

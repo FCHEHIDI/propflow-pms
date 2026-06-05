@@ -41,7 +41,7 @@ public sealed class Room : AggregateRoot
         if (squareMeters <= 0)
             throw DomainError.Validation("SquareMeters must be positive.");
 
-        return new Room
+        var room = new Room
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
@@ -57,6 +57,10 @@ public sealed class Room : AggregateRoot
             Status = RoomStatus.Available,
             CreatedAt = DateTime.UtcNow,
         };
+
+        // Raise domain event so RoomStatusBoardProjection can create the initial read model.
+        room.Raise(new RoomCreated(room.Id, propertyId, roomTypeId, roomNumber, floor, wing, building));
+        return room;
     }
 
     /// <summary>Triggered by CheckInCommand. Invariant: Occupancy becomes non-null.</summary>
@@ -82,7 +86,6 @@ public sealed class Room : AggregateRoot
         Raise(new RoomStatusChanged(Id, PropertyId, RoomStatus.Occupied, RoomStatus.VacantDirty));
     }
 
-    /// <summary>Housekeeping starts cleaning.</summary>
     public void BeginCleaning()
     {
         if (Status is not (RoomStatus.VacantDirty or RoomStatus.Available))
@@ -94,8 +97,8 @@ public sealed class Room : AggregateRoot
     }
 
     /// <summary>
-    /// Housekeeper completes visual inspection. Room becomes sellable (Available).
-    /// Invariant: Inspected is mandatory before Available for DayUse turnaround safety.
+    /// Housekeeper completes visual inspection.
+    /// Invariant: mandatory before Available for DayUse turnaround safety.
     /// </summary>
     public void CompleteInspection()
     {
@@ -106,7 +109,6 @@ public sealed class Room : AggregateRoot
         Raise(new RoomStatusChanged(Id, PropertyId, RoomStatus.OnChange, RoomStatus.Inspected));
     }
 
-    /// <summary>Inspection approved — room becomes sellable.</summary>
     public void MarkAvailable()
     {
         if (Status is not (RoomStatus.Inspected or RoomStatus.OutOfOrder or RoomStatus.OutOfService))
@@ -115,7 +117,6 @@ public sealed class Room : AggregateRoot
         var previous = Status;
         Status = RoomStatus.Available;
         Occupancy = null;
-
         Raise(new RoomStatusChanged(Id, PropertyId, previous, RoomStatus.Available));
 
         if (previous == RoomStatus.OutOfOrder)
@@ -124,7 +125,7 @@ public sealed class Room : AggregateRoot
 
     /// <summary>
     /// Withdraws room from inventory AND capacity count.
-    /// Invariant: triggers Allotment.RemoveRoom() for all future dates.
+    /// Invariant: triggers Allotment.RemoveRoom() for all future dates via domain event.
     /// </summary>
     public void DeclareOutOfOrder(string? reason = null)
     {

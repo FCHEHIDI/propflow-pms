@@ -2,6 +2,7 @@ using MassTransit;
 using Microsoft.Extensions.DependencyInjection;
 using PropFlow.Application.Bookings.Sagas;
 using PropFlow.Infrastructure.Consumers;
+using PropFlow.Infrastructure.Projections;
 
 namespace PropFlow.Infrastructure.Messaging;
 
@@ -15,12 +16,17 @@ public static class MassTransitSetup
         {
             // Sagas
             x.AddSagaStateMachine<BookingCreationSaga, BookingCreationState>()
-                .MartenRepository(); // Saga state persisted in Marten
+                .MartenRepository();
 
-            // Consumers
+            // Domain event consumers
             x.AddConsumer<BookingCheckedOutConsumer>();
             x.AddConsumer<RoomRemovedFromInventoryConsumer>();
             x.AddConsumer<InventoryUpdatedConsumer>();
+
+            // Read model projections
+            x.AddConsumer<AvailabilityViewProjection>();
+            x.AddConsumer<RoomStatusBoardProjection>();  // handles RoomCreated + RoomStatusChanged
+            x.AddConsumer<RateSyncConsumer>();
 
             x.UsingAzureServiceBus((ctx, cfg) =>
             {

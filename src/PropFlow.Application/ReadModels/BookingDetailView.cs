@@ -13,7 +13,6 @@ public sealed record BookingDetailView(
     int Children,
     decimal TotalAmount,
     string MealPlan,
-    string CancellationPolicyName,
     string Source,
     string? ChannelCode,
     string? ChannelBookingRef,
